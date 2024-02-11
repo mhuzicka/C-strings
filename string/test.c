@@ -22,6 +22,9 @@ int main() {
 
 	strSubstr(e, 0, 5, &b);
 
+	strFit(e);
+	strFit(d);
+
 	printf("e = %s ; %llu\n", str_c(e), strLength(e));
 	printf("a = %s ; %llu\n", str_c(a), strLength(a));
 

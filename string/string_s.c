@@ -68,7 +68,7 @@ static void __cdecl strRealloc(String str, const uint64 new_length) {
 
 	uint64 new_size = new_length * GROWTH_FACTOR * sizeof(char);
 	
-	char* temp = (String)realloc(str->text, new_size);
+	char* temp = (char*)realloc(str->text, new_size);
 
 	if (temp) {
 		str->size = new_size;
@@ -82,7 +82,7 @@ void __cdecl strFit(String str) {
 	char* temp = (char*)realloc(str->text, str->length * sizeof(char));
 
 	if (temp) {
-		str->text = &temp;
+		str->text = temp;
 		str->size = str->length * sizeof(char);
 	}
 }
