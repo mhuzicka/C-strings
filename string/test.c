@@ -4,32 +4,32 @@
 #include "string_s.h"
 
 int main() {
-	String /*a, b,*/ d, e;
-	int i;
+	String a = NULL, b = NULL, d = NULL, e = NULL;
 
 	//a = strWrite("a");
 
 	//b = strWrite("b");
 
-	d = strWrite("ABCDEFGI");
+	strNew(&a);
 
-	e = strWrite("abcdefgh");
+	strWrite(&d, "ABCDEFGI");
 
-	i = strCompareIgnoreCase(e, d);
-	printf("%d", i);
+	strAdd(d, d);
 
-	printf("%s\n%llu", str_c(e), strLength(e));
+	strWrite(&e, "abcdefgh");
 
-	//strToUpper(e);
+	strSubstr(d, 0, 8, &a);
 
-	//i = strCut(e, 1, 3);
+	strSubstr(e, 0, 5, &b);
 
-	//printf("%d", i);
+	printf("e = %s ; %llu\n", str_c(e), strLength(e));
+	printf("a = %s ; %llu\n", str_c(a), strLength(a));
 
-	printf("%s\n%llu", str_c(d), strLength(d));
+	printf("d = %s ; %llu\n", str_c(d), strLength(d));
+	printf("b = %s ; %llu\n", str_c(b), strLength(b));
 
-	//a = strDel(a);
-	//b = strDel(b);
+	a = strDel(a);
+	b = strDel(b);
 	d = strDel(d);
 	strDel(e);
 	return 0;

@@ -32,7 +32,7 @@ typedef struct string {
 
 // -- MEMORY MANAGEMENT --
 
-String strDel(String str) {
+String __cdecl strDel(String str) {
 	if (str != NULL) {
 		if (str->text != NULL) {
 			free(str->text);
@@ -44,195 +44,236 @@ String strDel(String str) {
 	return NULL;
 }
 
-static inline String strRealloc(String str, const uint64 new_length) {
-	assert(str->size < new_length);
-	
-	String temp = (String)realloc(str->text, new_length * GROWTH_FACTOR);
+static String __cdecl strAlloc(uint64 length) {
+	String out;
+	uint64 size = (length < MINIMAL_SIZE) ?
+		MINIMAL_SIZE * sizeof(char) : length * GROWTH_FACTOR * sizeof(char);
 
-	if (temp) {
-		str->size = new_length * GROWTH_FACTOR;
-	}
-	else {
-		strDel(str);
-		str->size = 0;
+	if ((out = (String)malloc(sizeof(struct string))) == NULL ||
+		(out->text = (char*)malloc(size)) == NULL) {
+
+		if (out != NULL) {
+			free(out);
+		}
+
+		return NULL;
 	}
 
-	return temp;
+	out->size = size;
+	return out;
 }
 
-void strFit(String* str) {
-	String temp = realloc(*str, (*str)->length);
+static void __cdecl strRealloc(String str, const uint64 new_length) {
+	assert(str->size < new_length);
 
-	assert(temp != NULL);
+	uint64 new_size = new_length * GROWTH_FACTOR * sizeof(char);
+	
+	char* temp = (String)realloc(str->text, new_size);
 
 	if (temp) {
-		str = &temp;
-		(*str)->size = (*str)->length;
+		str->size = new_size;
+		str->text = temp;
+	}
+}
+
+void __cdecl strFit(String str) {
+	assert(str);
+
+	char* temp = (char*)realloc(str->text, str->length * sizeof(char));
+
+	if (temp) {
+		str->text = &temp;
+		str->size = str->length * sizeof(char);
 	}
 }
 
 
 // -- GETTERS --
 
-uint64 strLength(const String str) {
+uint64 __cdecl strLength(const String str) {
+	assert(str);
+
 	return str->length - 1;
 }
 
-const char* str_c(const String str) {
+const char* __cdecl str_c(const String str) {
+	assert(str);
+
 	return str->text;
 }
 
 
 // -- TEXT MANIPULATION --
 
-String strWrite(const char* str_c) {
-	String out = NULL;
+void __cdecl strNew(String* pstr) {
+	if (*pstr) {
+		*pstr = strDel(*pstr);
+	}
 
-	if ((out = (String)malloc(sizeof(struct string))) == NULL) {
-		return NULL;
+	*pstr = strAlloc(1);
+
+	if (*pstr) {
+		(*pstr)->text[0] = '\0';
+		(*pstr)->length = 1;
+	}
+}
+
+void __cdecl strWrite(String* pstr, const char* str_c) {
+	uint64 allocLength;
+
+	if (*pstr) {
+		*pstr = strDel(*pstr);
 	}
 
 	if (str_c == NULL || str_c[0] == '\0') {
-		out->size = MINIMAL_SIZE;
+		strNew(pstr);
+	}
+	else {
+		allocLength = strlen(str_c) + 1;
 
-		if ((out->text = (char*) malloc(out->size * sizeof(char))) == NULL) {
-			free(out);
-			return NULL;
+		if ((*pstr = strAlloc(allocLength)) == NULL) {
+			return;
 		}
 
-		out->length = 1;
-		out->text[0] = '\0';
-		return out;
+		(*pstr)->length = allocLength;
+
+		if (strcpy_s((*pstr)->text, (*pstr)->size, str_c)) {
+			*pstr = strDel(*pstr);
+		}
 	}
-
-	out->length = strlen(str_c) + 1;
-	out->size = (out->length <= MINIMAL_SIZE) ? MINIMAL_SIZE : out->length * GROWTH_FACTOR;
-
-	if ((out->text = (char*) malloc(out->size * sizeof(char))) == NULL) {
-		free(out);
-		return NULL;
-	}
-
-	if (strcpy_s(out->text, out->length, str_c)) {
-		return strDel(out);
-	}
-
-	return out;
 }
 
-String strConcat(const String str1, const String str2) {
+String __cdecl strConcat(const String str1, const String str2) {
+	assert(str1 && str2);
+
 	uint64 numOfChars = str1->length + str2->length - 1;
 	String out;
 
 	assert(numOfChars < (0xFF'FFFF'FFFF)); // absurdly long ( > 1 TB)
 
-	if ((out = (String) malloc(sizeof(struct string))) == NULL ||
-		(out->text = (char*) malloc(numOfChars * GROWTH_FACTOR * sizeof(char))) == NULL) {
-
-		if (out != NULL) {
-			free(out);
-		}
-
+	if ((out = strAlloc(numOfChars)) == NULL) {
 		return NULL;
 	}
 
-	if (strcpy_s(out->text, str1->length, str1->text) ||
-		strcpy_s(out->text + str1->length - 1, str2->length, str2->text) ) {
+	if (strcpy_s(out->text, out->size, str1->text) ||
+		strcpy_s(out->text + str1->length - 1, out->size, str2->text) ) {
 		return strDel(out);
 	}
 
 	out->length = numOfChars;
-	out->size = numOfChars * GROWTH_FACTOR;
 
 	return out;
 }
 
-errno_t strAdd(String destination, const String source) {
+errno_t __cdecl strAdd(String destination, const String source) {
+	assert(destination);
+
+	if (source == NULL || source->length < 2) {
+		return 1;
+	}
+
 	uint64 numOfChars = destination->length + source->length - 1;
-	String temp;
 
 	assert(numOfChars < (0xFF'FFFF'FFFF)); // absurdly long ( > 1 TB)
 
 	if (numOfChars > destination->size) {
-		if ((temp = strRealloc(destination, numOfChars)) == NULL) {
-			return 1;
-		}
-		else {
-			destination = temp;
+		strRealloc(destination, numOfChars);
+		if (destination->size < numOfChars) {
+			return 2;
 		}
 	}
 
-	if (strcpy_s(destination->text + destination->length - 1, source->length, source->text)) {
-		return 2;
+	if ( memcpy_s(destination->text + destination->length - 1,
+		destination->size - destination->length - 1,
+		source->text, source->length) ) {
+		return 3;
 	}
 
 	destination->length = numOfChars;
-	destination->size = numOfChars * GROWTH_FACTOR;
 
 	return 0;
 }
 
-String strToLower(const String str) {
+void __cdecl strToLower(String str) {
 	uint64 i = 0;
-	String out = NULL;
 
-	if ((out = (String)malloc(sizeof(struct string))) == NULL ||
-		(out->text = (char*)malloc(str->size * sizeof(char))) == NULL) {
-		if (out != NULL) {
-			free(out);
-		}
-
-		return NULL;
-	}
+	assert(str);
 
 	while (i < str->length) {
-		(out->text)[i] = TOLOWER((str->text)[i]);
+		(str->text)[i] = TOLOWER((str->text)[i]);
 
 		i++;
 	}
-
-	return out;
 }
 
-String strToUpper(const String str) {
+void __cdecl strToUpper(String str) {
 	uint64 i = 0;
-	String out = NULL;
 
-	if ((out = (String)malloc(sizeof(struct string))) == NULL ||
-		(out->text = (char*)malloc(str->size * sizeof(char))) == NULL) {
-		if (out != NULL) {
-			free(out);
-		}
-
-		return NULL;
-	}
+	assert(str);
 
 	while (i < str->length) {
-		(out->text)[i] = TOUPPER((str->text)[i]);
+		(str->text)[i] = TOUPPER((str->text)[i]);
 
 		i++;
 	}
+}
 
-	return out;
+void __cdecl strSubstr(const String str, unsigned long long start, unsigned long long end, String* pout) {
+	uint64 length;
+	char* temp;
+
+	assert(str);
+	assert(start < str->length);
+	assert(end < str->length);
+
+	if (*pout) {
+		*pout = strDel(*pout);
+	}
+
+	if (start > end) {  }
+	else if (start == end) {
+		strWrite(pout, "\0");
+	}
+	else {
+		length = end - start + 1; // terminating char
+
+		if ((*pout = strAlloc(length)) == NULL) {
+			return;
+		}
+
+		temp = str->text + start;
+		if (memcpy_s((*pout)->text, length, temp, length)) {
+			*pout = strDel(*pout);
+			return;
+		}
+
+		(*pout)->text[length - 1] = '\0';
+		(*pout)->length = length;
+	}
 }
 
 
 // -- TEXT INFORMATION GETTERS --
 
-int strCompare(const String str1, const String str2) {
+int __cdecl strCompare(const String str1, const String str2) {
+	assert(str1 && str2);
+
 	return strcmp(str1->text, str2->text);
 }
 
-int strCompareFast(const String str1, const String str2) {
+int __cdecl strCompareFast(const String str1, const String str2) {
 	uint64 index = 0;
+
+	assert(str1 && str2);
 
 	if (str1->length != str2->length) {
 		return 1;
 	}
 
 	while (index != str1->length) {
-		if ((str1->text)[index] != (str2->text)[index])
+		if ((str1->text)[index] != (str2->text)[index]) {
 			return 1;
+		}
 
 		index++;
 	}
@@ -240,16 +281,19 @@ int strCompareFast(const String str1, const String str2) {
 	return 0;
 }
 
-int strCompareIgnoreCase(const String str1, const String str2) {
+int __cdecl strCompareIgnoreCase(const String str1, const String str2) {
 	uint64 index = 0;
+
+	assert(str1 && str2);
 
 	if (str1->length != str2->length) {
 		return 1;
 	}
 
 	while (index != str1->length) {
-		if (TOLOWER((str1->text)[index]) != TOLOWER((str2->text)[index]))
+		if (TOLOWER((str1->text)[index]) != TOLOWER((str2->text)[index])) {
 			return 1;
+		}
 
 		index++;
 	}
@@ -257,12 +301,16 @@ int strCompareIgnoreCase(const String str1, const String str2) {
 	return 0;
 }
 
-inline char strAt(const String str, unsigned long long index) {
+inline char __cdecl strAt(const String str, unsigned long long index) {
+	assert(str);
+
 	return index > str->length ? -1 : str->text[index];
 }
 
-char* strCharArray(const String str) {
+char* __cdecl strCharArray(const String str) {
 	char* out;
+
+	assert(str);
 
 	if ((out = (char*)malloc(str->length * sizeof(char))) == NULL) {
 		return NULL;
@@ -275,9 +323,11 @@ char* strCharArray(const String str) {
 	return out;
 }
 
-uint64 strSum(const String str) {
+uint64 __cdecl strSum(const String str) {
 	uint64 index = 0;
 	uint64 sum = 0;
+
+	assert(str);
 
 	while (index != str->length) {
 		sum += (str->text)[index];
@@ -311,41 +361,6 @@ short strNumber(const String str, double* value, const short mode) {
 		}
 
 		index++;
-	}
-
-	return 0;
-}
-
-short strCut(String str, unsigned long long start, unsigned long long end) {
-	uint64 num, size;
-	char* new, *temp;
-
-	if (start > end) {
-		num = start;
-		start = end;
-		end = start;
-	}
-
-	if (start == end) {
-		str->text = realloc(str->text, sizeof(char));
-		(str->text)[0] = '\0';
-	}
-	else if (str->length <= start) {
-		return 1;
-	}
-	else {
-		size = end - start;
-		if ((new = (char*)malloc((size + 1) * sizeof(char))) == NULL) {
-			return 1;
-		}
-
-		temp = str->text + start;
-		memcpy_s(new, size, temp, size);
-		new[size] = '\0';
-
-		free(str->text);
-		str->text = new;
-		str->length = size + 1;
 	}
 
 	return 0;

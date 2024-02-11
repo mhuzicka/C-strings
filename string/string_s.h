@@ -2,93 +2,81 @@
 
 /* --- THIS VERSION IS FOR MSVC COMPILER --- */
 
-/*GitHub: mhuzicka
+/* GitHub: mhuzicka
 * 
 * This library contains functions that are often used when
 * working with arrays of characters (or strings). The String
 * data structure provides safer methods for working with
 * strings in C by taking care of memory management when
 * working with strings, although it is not as optimal as
-* using strings in C plus plus.
+* using strings in C++.
 * 
 * Some operations can still cause a memory leak, but every
 * such case - and how to evade it - is explained in the
 * comments for each function.
 * 
-* Although value for length of a string is unsigned int,
-* the length should be less than the value of INT_MAX
-* macro, though some operations theoretically support
-* Strings with length of the max value the unsigned integer
-* can support.
-* 
-* The library is useful for smaller projects or where
-* performance is not that big of an issue. */
+* The library is useful for smaller projects where performance
+* is not that big of an issue.
+*/
 
 #pragma once
 
-/*A safer method for storing and operating with an array of
-chars.*/
+/* A safer method for storing and operating with an array of
+chars. */
 typedef struct string* String;
 
-/*Returns the length of the string without terminating
-character.*/
-unsigned long long strLength(const String str);
+/* Returns the length of the string without terminating
+character. */
+unsigned long long __cdecl strLength(const String str);
 
 /*Returns pointer to chars in the string.*/
-const char* str_c(const String str);
+const char* __cdecl str_c(const String str);
 
-/*Returns a string containing given sequence of characters.*/
-String strWrite(const char* str);
+/* Creates an empty string or returns NULL if memory could
+not be allocated. */
+void __cdecl strNew(String* pstr);
 
-/* Deallocates the string. Should be called for every call
-of strwrite(). Always returns NULL.*/
-String strDel(String str);
+/* Creates a string containing given sequence of characters. */
+void __cdecl strWrite(String* pstr, const char* str_c);
 
-/*Concatenates str2 to str1 and return a String containing
-character sequence of str1 followed by character sequence
-of str2. Returns NULL if a block of memory could not be
-allocated.
+/* Deallocates the string. Always returns NULL. */
+String __cdecl strDel(String str);
 
-WARNING: allocates a new String, so the return value should
-not be assigned to str1 or str2 and should always be
-assigned to a variable, otherwise causes a MEMORY LEAK! Use
-strAdd() to overwrite str1.*/
-String strConcat(const String str1, const String str2);
+/* Concatenates strings.
 
-/*Concatenates str2 to str1. Unlike strconcat(), strAdd()
-cannot cause a memory leak, but it modifies str1. Does
-nothing if a block of memory could not be allocated.
-Returns a non-zero value if str1 was not modified.*/
-errno_t strAdd(String destination, const String source);
+WARNING: creates a new string, so a MEMORY LEAK will happen
+if the return value is either of inputs. Use strAdd for a
+memory-safe method. */
+String __cdecl strConcat(const String str1, const String str2);
 
-/*Compares two strings.
+/* Concatenates str2 to str1. Destination must be a valid
+String. Returns a non-zero value if str1 was not modified. */
+errno_t __cdecl strAdd(String destination, const String source);
 
-Returns 0 if strings are identical.
-Returns value of the first unique char from the first
-string minus the value of char from second string at the
-same location.*/
-int strCompare(const String str1, const String str2);
+/* Compares two strings. Same as strcmp() from string.h. */
+int __cdecl strCompare(const String str1, const String str2);
 
-/*Compares two strings, but only returns 1 if not equal and
-0 if equal.*/
-int strCompareFast(const String str1, const String str2);
+/* Compares two strings, but only returns 1 if not equal and
+0 if equal. */
+int __cdecl strCompareFast(const String str1, const String str2);
 
-/*Compares two strings. Same as strCompareFast, but ignores
-case.*/
-int strCompareIgnoreCase(const String str1, const String str2);
+/* Compares two strings. Same as strCompareFast, but ignores
+case. */
+int __cdecl strCompareIgnoreCase(const String str1, const String str2);
 
-/*Returns character at given index. Returns -1 if string is
-shorter than index.*/
-inline char strAt(const String str, unsigned long long index);
+/* Returns character at given index. Returns -1 if string is
+shorter than index. */
+char __cdecl strAt(const String str, unsigned long long index);
 
-/*Creates an array of chars from a String (duplicates the
-array of chars).*/
-char* strCharArray(const String str);
+/* Creates an array of chars from a String (creates a
+duplicate). */
+char* __cdecl strCharArray(const String str);
 
-/*Returns sum of ASCII values of characters in the String.*/
-unsigned long long strSum(const String str);
+/* Returns sum of ASCII values of characters in the String. */
+unsigned long long __cdecl strSum(const String str);
 
-/*If String can be converted to a number, returns 1.
+/* TODO
+If String can be converted to a number, returns 1.
 Otherwise returns 0 and does not modify variable value.
 
 If there are more than one number located in the String,
@@ -98,34 +86,36 @@ function will read number defined by this precedence:
 3 - the first decimal number
 
 The */
-short strNumber(String str, double* value, short mode);
+short __cdecl strNumber(String str, double* value, short mode);
 
 /* TODO
 Checks if the String contains a given substring. The return
 value represents how many substrings does the String
-contain.*/
-int strContains(const String str, const String substring);
+contain. */
+int __cdecl strContains(const String str, const String substring);
 
 /* TODO
 Checks if the String contains a given substring. Returns 1
 if yes and 0 if not. Faster than strContains.*/
-int strContainsFast(const String str, const String substring);
+int __cdecl strContainsFast(const String str, const String substring);
 
-/*Cuts a String. The str String will contain characters
-between a start index (including) and an end index
-(excluding). Returns 0 if successful, 1 if the str variable
-was not modified.
+/* Creates a string from a substring in str.
 
-If start == end, str will contain only terminating char.*/
-short strCut(String str, unsigned long long start, unsigned long long end);
+If start == end, creates an empty string.
+
+If start > end, returns NULL. */
+void __cdecl strSubstr(const String str, unsigned long long start, unsigned long long end, String* pout);
 
 /* TODO
 Splits a String into multiple Strings. Returns an array of
-Strings. Counter contains a number of strings in an array.*/
-String* strSplit(String str, char splitter, int* counter);
+Strings. Output_size is a number of strings in an array.*/
+String* __cdecl strSplit(const String str, char splitter, unsigned long long* output_size);
 
-/*To lowercase.*/
-String strToLower(const String str);
+/* To lowercase. */
+void __cdecl strToLower(String str);
 
-/*To uppercase.*/
-String strToUpper(const String str);
+/* To uppercase. */
+void __cdecl strToUpper(String str);
+
+/* Deallocation of redundant allocated memory. */
+void __cdecl strFit(String str);
